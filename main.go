@@ -56,6 +56,7 @@ func main() {
 	registerSessionLogout(mux, resolveSessionUser, revokeSessionToken)
 
 	mux.HandleFunc("/auth/register", registerHandler(db))
+	mux.HandleFunc("/auth/register-technician", registerTechnicianHandler(db))
 	mux.HandleFunc("/auth/login", loginHandler(db))
 	mux.HandleFunc("/auth/me", meHandler(db))
 	mux.HandleFunc("/destinations", destinationsHandler(db))
