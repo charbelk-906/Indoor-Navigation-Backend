@@ -17,6 +17,7 @@ type destination struct {
 	FloorID          int64  `json:"floor_id"`
 	FloorName        string `json:"floor_name"`
 	NavigationNodeID int64  `json:"navigation_node_id"`
+	Kind             string `json:"kind"`
 }
 
 func destinationsHandler(db *sql.DB) http.HandlerFunc {
@@ -43,31 +44,39 @@ func destinationsHandler(db *sql.DB) http.HandlerFunc {
 		defer cancel()
 
 		rows, err := db.QueryContext(ctx, `
-			SELECT
-				f.facility_id,
-				f.facility_name,
-				f.facility_type,
-				f.floor_id,
-				COALESCE(fl.floor_name, ''),
-				f.navigation_node_id
+			SELECT f.facility_id AS id, f.facility_name AS name, f.facility_type AS type,
+			       f.floor_id AS floor_id, COALESCE(fl.floor_name, '') AS floor_name,
+			       f.navigation_node_id AS node_id, 'facility' AS kind
 			FROM indoor_nav_locations.facilities AS f
 			JOIN indoor_nav_locations.floors AS fl
-				ON fl.floor_id = f.floor_id
-				AND fl.location_id = f.location_id
+				ON fl.floor_id = f.floor_id AND fl.location_id = f.location_id
 			JOIN indoor_nav_locations.navigation_nodes AS n
-				ON n.node_id = f.navigation_node_id
-				AND n.location_id = f.location_id
-				AND n.floor_id = f.floor_id
+				ON n.node_id = f.navigation_node_id AND n.location_id = f.location_id AND n.floor_id = f.floor_id
 			JOIN indoor_nav_common.locations AS l
 				ON l.location_id = f.location_id
-			WHERE f.location_id = ?
-				AND f.is_active = 1
-				AND n.is_active = 1
-				AND l.is_active = 1
+			WHERE f.location_id = ? AND f.is_active = 1 AND n.is_active = 1 AND l.is_active = 1
 				AND (? = '' OR LOCATE(?, f.facility_name) > 0)
-			ORDER BY f.facility_name, f.facility_id
+
+			UNION ALL
+
+			SELECT s.store_id, s.store_name, c.category_name,
+			       s.floor_id, COALESCE(fl.floor_name, ''),
+			       s.navigation_node_id, 'store'
+			FROM indoor_nav_locations.stores AS s
+			JOIN indoor_nav_locations.store_categories AS c
+				ON c.category_id = s.category_id
+			JOIN indoor_nav_locations.floors AS fl
+				ON fl.floor_id = s.floor_id AND fl.location_id = s.location_id
+			JOIN indoor_nav_locations.navigation_nodes AS n
+				ON n.node_id = s.navigation_node_id AND n.location_id = s.location_id AND n.floor_id = s.floor_id
+			JOIN indoor_nav_common.locations AS l
+				ON l.location_id = s.location_id
+			WHERE s.location_id = ? AND s.is_active = 1 AND n.is_active = 1 AND l.is_active = 1
+				AND (? = '' OR LOCATE(?, s.store_name) > 0)
+
+			ORDER BY name, kind, id
 			LIMIT 100
-		`, locationID, query, query)
+		`, locationID, query, query, locationID, query, query)
 
 		if err != nil {
 			log.Printf("Destinations query failed: %v", err)
@@ -88,6 +97,7 @@ func destinationsHandler(db *sql.DB) http.HandlerFunc {
 				&item.FloorID,
 				&item.FloorName,
 				&item.NavigationNodeID,
+				&item.Kind,
 			); err != nil {
 				log.Printf("Destination scan failed: %v", err)
 				sendJSON(w, http.StatusInternalServerError,

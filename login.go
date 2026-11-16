@@ -114,7 +114,7 @@ func loginHandler(db *sql.DB) http.HandlerFunc {
 		token := hex.EncodeToString(randomBytes[:])
 		tokenHash := sha256.Sum256([]byte(token))
 		now := time.Now()
-		expiresAt := now.Add(time.Hour)
+		expiresAt := now.Add(12 * time.Hour)
 
 		sessionStore.Lock()
 		for key, session := range sessionStore.items {
@@ -132,7 +132,7 @@ func loginHandler(db *sql.DB) http.HandlerFunc {
 			"message":      "Login successful",
 			"access_token": token,
 			"token_type":   "Bearer",
-			"expires_in":   3600,
+			"expires_in":   43200,
 			"user_id":      userID,
 		})
 	}
