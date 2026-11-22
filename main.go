@@ -60,6 +60,7 @@ func main() {
 	mux.HandleFunc("/auth/login", loginHandler(db))
 	mux.HandleFunc("/auth/me", meHandler(db))
 	mux.HandleFunc("/destinations", destinationsHandler(db))
+	mux.HandleFunc("/places/details", placeDetailsHandler(db)) // shop & restaurant details (place_details.go)
 	mux.HandleFunc("/navigation/graph", graphHandler(db))
 	mux.HandleFunc("/beacons", beaconsHandler(db))
 
