@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#F6F8FC">
+    <title>Indoor Navigation · Live demo</title>
+    <style>
+        :root {
+            --ink: #071027; --muted: #596B8D; --blue: #1264F5; --light: #E8F1FF; --green: #09A87B;
+            --red: #E5484D; --purple: #7C5CFC; --amber: #D97706; --bg: #F6F8FC; --card: #FFFFFF; --line: #E5EAF2;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; background: var(--bg); color: var(--ink);
+            font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+        .wrap { max-width: 560px; margin: 0 auto; padding: 0 18px; }
+        svg.i { width: 22px; height: 22px; fill: currentColor; flex: none; }
+        .watch { position: sticky; top: 0; z-index: 5; background: var(--light); color: var(--blue); font-size: 12.5px; font-weight: 600;
+            padding: calc(6px + env(safe-area-inset-top)) 18px 6px; display: flex; gap: 8px; align-items: center; justify-content: center; }
+        .watch .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: blink 1.4s infinite; }
+        .watch.off { background: #EEF1F6; color: var(--muted); } .watch.off .dot { background: #9AA6BA; animation: none; }
+        @keyframes blink { 50% { opacity: .3; } }
+        .page { display: none; } .page.show { display: block; }
+        .top { display: flex; align-items: center; padding-top: 14px; }
+        .top .grow > div:first-child { color: var(--muted); font-size: 14px; }
+        .top h1 { margin: 0; font-size: 24px; font-weight: 800; }
+        .chipst { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 600; }
+        .chipst i { width: 8px; height: 8px; border-radius: 50%; }
+        .searchbar { margin-top: 12px; height: 50px; background: #fff; border-radius: 14px; box-shadow: 0 1px 2px rgba(7,16,39,.1);
+            display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--muted); cursor: pointer; }
+        .quick { display: flex; gap: 10px; margin-top: 12px; }
+        .quick > div { flex: 1; background: #fff; border-radius: 16px; padding: 10px 0; display: grid; place-items: center; gap: 4px; cursor: pointer; font-size: 12px; font-weight: 500; }
+        .circle { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; }
+        .circle svg { width: 20px; height: 20px; }
+        .nearest { margin-top: 12px; border-radius: 20px; padding: 16px; color: #fff; display: flex; align-items: center; gap: 14px; transition: background .3s; cursor: pointer; }
+        .nearest .ic { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; flex: none; }
+        .nearest b { display: block; font-size: 18px; } .nearest span { font-size: 13px; opacity: .9; }
+        .roadbox { position: relative; margin-top: 12px; border-radius: 24px; overflow: hidden; background: #F4F7FB; }
+        .roadbox canvas { width: 100%; display: block; }
+        .roadcap { background: #fff; color: var(--muted); font-size: 12px; text-align: center; padding: 8px 12px; }
+        .seg { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,.92); border-radius: 999px; padding: 3px; display: flex; }
+        .seg button { border: 0; background: transparent; font: inherit; font-size: 12px; padding: 6px 10px; border-radius: 999px; color: var(--ink); cursor: pointer; }
+        .seg button.sel { background: var(--blue); color: #fff; font-weight: 700; }
+        .sec { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 18px 0 8px; }
+        .list { display: grid; gap: 8px; }
+        .row { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 1px 2px rgba(7,16,39,.08); cursor: pointer; }
+        .grow { flex: 1; min-width: 0; }
+        .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .s { font-size: 12px; color: var(--muted); }
+        .pin { width: 34px; height: 34px; border-radius: 50%; color: #fff; font-weight: 700; display: grid; place-items: center; flex: none; }
+        .muted { color: var(--muted); font-size: 12px; padding: 10px 0; }
+        .banner { border-radius: 20px; padding: 16px; color: #fff; display: flex; align-items: center; gap: 14px; transition: background .3s; margin-top: 12px; }
+        .banner .ic { width: 52px; height: 52px; border-radius: 16px; background: rgba(255,255,255,.18); display: grid; place-items: center; flex: none; }
+        .banner .ic svg { width: 32px; height: 32px; }
+        .banner b { display: block; font-size: 24px; line-height: 1.15; } .banner span { font-size: 14px; opacity: .92; }
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .chip { border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 600; }
+        .fchip { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 7px 12px; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+        .fchip.sel { background: #DCE7FD; border-color: #DCE7FD; color: #0B3E9C; font-weight: 600; }
+        .hscroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; } .hscroll::-webkit-scrollbar { display: none; }
+        .card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(7,16,39,.08); padding: 14px 16px; }
+        .steps .st { display: flex; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+        .steps .st:last-child { border-bottom: 0; } .steps .st.done { opacity: .45; } .steps .st.now { font-weight: 700; color: var(--blue); }
+        .head { display: flex; align-items: center; gap: 8px; padding-top: 10px; }
+        .head h2 { margin: 0; font-size: 20px; } .iconbtn { border: 0; background: transparent; padding: 8px; border-radius: 50%; color: var(--ink); cursor: pointer; }
+        input.text, select.text { width: 100%; font: inherit; font-size: 16px; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; font: inherit; font-weight: 650; border-radius: 14px; padding: 13px 16px; cursor: pointer; text-decoration: none; }
+        .primary { background: var(--blue); color: #fff; } .ghost { background: var(--light); color: var(--blue); } .full { width: 100%; }
+        .acts { display: flex; gap: 8px; margin-top: 12px; }
+        .acts a, .acts button { flex: 1; background: #fff; border: 0; border-radius: 14px; padding: 10px 0; display: grid; place-items: center; gap: 4px; font: inherit; font-size: 12px; color: var(--ink); text-decoration: none; cursor: pointer; }
+        .acts svg { fill: var(--blue); }
+        .menuitem { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); } .menuitem:last-child { border-bottom: 0; }
+        .na { color: var(--muted); text-decoration: line-through; }
+        .set { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); } .set:last-child { border-bottom: 0; }
+        .set svg { fill: var(--blue); }
+        .sw { position: relative; width: 50px; height: 30px; flex: none; } .sw input { display: none; }
+        .sw span { position: absolute; inset: 0; background: #C9D3E3; border-radius: 15px; transition: .2s; cursor: pointer; }
+        .sw span::after { content: ""; position: absolute; width: 24px; height: 24px; top: 3px; left: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+        .sw input:checked + span { background: var(--blue); } .sw input:checked + span::after { left: 23px; }
+        nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; z-index: 6; box-shadow: 0 -1px 0 var(--line); padding-bottom: env(safe-area-inset-bottom); }
+        nav.tabs .wrap { display: flex; padding: 0 6px; }
+        nav.tabs button { flex: 1; border: 0; background: none; font: inherit; font-size: 12px; color: var(--muted); padding: 10px 0 10px; display: grid; place-items: center; gap: 3px; cursor: pointer; }
+        nav.tabs button .pill { width: 60px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+        nav.tabs button.sel { color: var(--ink); font-weight: 600; } nav.tabs button.sel .pill { background: #DCE7FD; color: #0B3E9C; }
+        .qr { text-align: center; }
+        .qr #qrcode { display: inline-block; background: #fff; padding: 14px; border-radius: 16px; border: 1px solid var(--line); }
+        .qr .url { font-weight: 700; margin-top: 10px; word-break: break-all; }
+        .empty { text-align: center; color: var(--muted); padding: 24px 8px; }
+        input[type=range] { width: 100%; accent-color: var(--blue); }
+        .sheet { position: fixed; inset: 0; background: rgba(7,16,39,.35); z-index: 10; display: none; align-items: flex-end; }
+        .sheet.show { display: flex; }
+        .sheet .panel { background: var(--bg); width: 100%; max-width: 560px; margin: 0 auto; border-radius: 22px 22px 0 0; padding: 10px 18px calc(24px + env(safe-area-inset-bottom)); }
+        .grab { width: 40px; height: 5px; border-radius: 3px; background: #C9D3E3; margin: 4px auto 12px; }
+    </style>
+</head>
+<body>
+<div class="watch off" id="watch"><span class="dot"></span><span id="watchText">Connecting to the presenter…</span></div>
+<main class="wrap">
+    <div class="page show" id="p-home"></div>
+    <div class="page" id="p-search"></div>
+    <div class="page" id="p-place"></div>
+    <div class="page" id="p-route"></div>
+    <div class="page" id="p-trip"></div>
+    <div class="page" id="p-profile"></div>
+</main>
+<nav class="tabs"><div class="wrap" id="tabs"></div></nav>
+<div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
+<script>
+    "use strict";
+
+    const LOCATION_ID = 1;
+    const FT = 3.28084;
+    const C = { amber: "#D97706", blue: "#1264F5", green: "#09A87B", red: "#E5484D", purple: "#7C5CFC", ink: "#071027", grey: "#8C99B0", orange: "#E07A1F", muted: "#596B8D", teal: "#0E9AA7", brown: "#B36528", dgreen: "#2E7D32" };
+    const S = {
+        graph: null, beacons: [], places: [], live: null, online: false,
+        feet: load("feet", true), marker: load("marker", "both"), roadBeacons: load("roadBeacons", true), speed: load("speed", 1.2),
+        saved: load("saved", []), recent: load("recent", []), trip: load("trip", null),
+        myHeading: null, compass: false, cat: "All", tab: "home", place: null, route: null, hist: {}
+    };
+    function load(k, d) { try { const v = localStorage.getItem("demo_" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+    function save(k, v) { try { localStorage.setItem("demo_" + k, JSON.stringify(v)); } catch (e) {} }
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    async function api(path) { const r = await fetch(path, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+    // ───────── icons (Material) ─────────
+    const P = {
+        home: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
+        search: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+        flight: "M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z",
+        person: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
+        wc: "M5.5 22v-7.5H4V9c0-1.1.9-2 2-2h3c1.1 0 2 .9 2 2v5.5H9.5V22h-4zM18 22v-6h3l-2.54-7.63A2.01 2.01 0 0 0 16.56 7h-.12c-.86 0-1.63.55-1.9 1.37L12 16h3v6h3zM7.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm9 0c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2z",
+        elevator: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM8.5 6c.69 0 1.25.56 1.25 1.25S9.19 8.5 8.5 8.5s-1.25-.56-1.25-1.25S7.81 6 8.5 6zM11 14h-1v4H7v-4H6v-2.5c0-1.1.9-2 2-2h1c1.1 0 2 .9 2 2V14zm4.5 3L13 13h5l-2.5 4zM13 11l2.5-4 2.5 4h-5z",
+        exit: "M14 6v15H3v-2h2V3h9v1h5v15h2v2h-4V6h-3zm-4 5v2h2v-2h-2z",
+        door: "M19 19V5c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v14H3v2h18v-2h-2zm-4-6h-2v-2h2v2z",
+        info: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z",
+        food: "M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z",
+        shop: "M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2h2V8h4v2h2V8h2v12z",
+        place: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z",
+        stairs: "M19 5h-5v5h-3v4H8v5H3v2h7v-5h3v-4h3V7h3V5z",
+        chev: "M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
+        back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
+        star: "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z",
+        starO: "m22 9.24-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z",
+        up: "M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z",
+        check: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        close: "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+        bt: "M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z",
+        compass: "M12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1c.61 0 1.1-.49 1.1-1.1s-.49-1.1-1.1-1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6 18l3.81-8.19L18 6l-3.81 8.19z",
+        walk: "M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7",
+        call: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
+        web: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z",
+        share: "M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11A2.99 2.99 0 0 0 21 5a3 3 0 1 0-5.91.7L8.04 9.81A3 3 0 1 0 6 15c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65A2.92 2.92 0 1 0 18 16.08z",
+        insta: "M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zM17.2 5.6a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM16 2H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6h8a6 6 0 0 0 6-6V8a6 6 0 0 0-6-6zm4 14a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v8z",
+        ruler: "M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z",
+        nav: "M12 2 4.5 20.29l.71.71L12 18l6.79 3 .71-.71z",
+        qr: "M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 16h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm0 10h2v2h-2zm-6-6h2v2h-2zm2 2h2v2h-2zm-2 2h2v2h-2zm2 2h2v2h-2zm2-2h2v2h-2zm0-4h2v2h-2zm2 2h2v2h-2z"
+    };
+    const ic = (n, extra = "") => `<svg class="i" viewBox="0 0 24 24" ${extra}><path d="${P[n] || P.place}"/></svg>`;
+
+    // categories exactly as in the app
+    const CATS = [
+        ["All", "All", "place", C.ink, []],
+        ["Gates", "Gates", "flight", C.blue, ["GATE", "CHECK_IN", "BAGGAGE_CLAIM", "SECURITY"]],
+        ["Restrooms", "Restrooms", "wc", C.teal, ["WC"]],
+        ["Elevators", "Elevators & stairs", "elevator", C.purple, ["ELEVATOR", "ESCALATOR", "STAIRS"]],
+        ["Exits", "Exits", "exit", C.red, ["EXIT", "ENTRANCE"]],
+        ["Help", "Help & info", "info", C.dgreen, ["INFORMATION", "ATM", "PARKING", "ROOM", "OTHER"]],
+        ["Food", "Food & shops", "food", C.brown, ["FOOD", "SHOP"]]
+    ];
+    const catOf = t => CATS.find(c => c[4].includes(t));
+    const placeColor = t => catOf(t)?.[3] || C.muted;
+    const placeIcon = t => ({ GATE: "flight", CHECK_IN: "flight", WC: "wc", ELEVATOR: "elevator", ESCALATOR: "elevator", STAIRS: "stairs", EXIT: "exit", ENTRANCE: "door", INFORMATION: "info", FOOD: "food", SHOP: "shop" }[t] || "place");
+    const typeLabel = t => ({ WC: "Restroom", INFORMATION: "Information", FOOD: "Food & drink", CHECK_IN: "Check-in", BAGGAGE_CLAIM: "Baggage claim" }[t] || (t.charAt(0) + t.slice(1).toLowerCase()).replace(/_/g, " "));
+    const SYN = { WC: ["restroom", "toilet", "bathroom", "washroom", "wc", "loo"], ELEVATOR: ["elevator", "lift"], STAIRS: ["stairs", "steps"], EXIT: ["exit", "way out"], FOOD: ["food", "cafe", "café", "coffee", "restaurant", "eat"], SHOP: ["shop", "store", "clothes"], INFORMATION: ["info", "help", "desk"] };
+
+    // ───────── geometry (same formulas as the app) ─────────
+    const norm = d => ((d % 360) + 360) % 360;
+    const rel = (a, b) => { let d = norm(a - b); return d > 180 ? d - 360 : d; };
+    const deg = r => r * 180 / Math.PI, rad = d => d * Math.PI / 180;
+    function mapToBearing(dx, dy, H, mirrored) { return norm(H - deg(Math.atan2((mirrored ? -1 : 1) * dy, dx))); }
+    function lenText(m) {
+        if (m == null || !isFinite(m)) return "";
+        if (S.feet) { const f = Math.round(m * FT); return f < 3 ? "< 3 ft" : f + " ft"; }
+        return m < 1 ? "< 1 m" : (m < 10 ? m.toFixed(1) : Math.round(m)) + " m";
+    }
+    function nodeName(n, dest) {
+        if (!n) return ""; if (dest && n.id === dest.navigation_node_id) return dest.name;
+        const c = n.code.replace(/^DEMO_/, "").replace(/^PLACE_B\d+$/, "the place").toLowerCase().replace(/_/g, " ");
+        return c.charAt(0).toUpperCase() + c.slice(1);
+    }
+
+    // ───────── road view (port of the app's RoadView) ─────────
+    class Road {
+        constructor(canvas) { this.cv = canvas; this.ctx = canvas.getContext("2d"); this.m = { arrow: null, turnAt: null, turnDir: 0, items: [], walking: false, accent: C.blue };
+            this.unwrapped = 0; this.shown = 0; this.turnS = 0; this.t0 = performance.now(); requestAnimationFrame(() => this.frame()); }
+        set(m) { if (m.arrow != null) this.unwrapped += rel(m.arrow, this.unwrapped); this.m = m; }
+        frame() {
+            const now = performance.now();
+            this.shown += (this.unwrapped - this.shown) * 0.25;
+            this.turnS += ((this.m.turnAt ?? 0) - this.turnS) * 0.15;
+            this.draw((now - this.t0) / 900 % 1, (now - this.t0) / 1600 % 1);
+            requestAnimationFrame(() => this.frame());
+        }
+        draw(flow, pulse) {
+            const cv = this.cv, dpr = window.devicePixelRatio || 1;
+            const W = cv.clientWidth, H = cv.clientHeight;
+            if (!W || !H) return;
+            if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+            const g = this.ctx; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const m = this.m, hasTurn = m.turnAt != null && m.turnDir !== 0;
+            const horizon = H * 0.16, pitch = rad(30), cosP = Math.cos(pitch), sinP = Math.sin(pitch);
+            const camBack = 2.6, camH = 3.4, focal = W * 0.85, cy0 = horizon + focal * Math.tan(pitch);
+            const proj = (x, y, z = 0) => { const dy = y + camBack, dz = z - camH, depth = dy * cosP - dz * sinP;
+                if (depth < 0.4) return null; const vert = dy * sinP + dz * cosP; return [W / 2 + focal * x / depth, cy0 - focal * vert / depth]; };
+            const depthAt = y => (y + camBack) * cosP + camH * sinP;
+            const radius = 1.8, ts = Math.max(0.8, this.turnS), arc = radius * Math.PI / 2, dir = m.turnDir;
+            const center = s => { if (!hasTurn || s <= ts) return [0, s, 0];
+                if (s <= ts + arc) { const a = (s - ts) / radius; return [dir * radius * (1 - Math.cos(a)), ts + radius * Math.sin(a), dir * a]; }
+                return [dir * (radius + (s - ts - arc)), ts + radius, dir * Math.PI / 2]; };
+            const at = (s, lat, z = 0) => { const [x, y, hd] = center(s); return proj(x - Math.cos(hd) * lat, y + Math.sin(hd) * lat, z); };
+
+            let gr = g.createLinearGradient(0, 0, 0, horizon); gr.addColorStop(0, "#CFE0FB"); gr.addColorStop(1, "#F2F6FD");
+            g.fillStyle = gr; g.fillRect(0, 0, W, horizon);
+            gr = g.createLinearGradient(0, horizon, 0, H); gr.addColorStop(0, "#E3E9F2"); gr.addColorStop(1, "#CCD6E4");
+            g.fillStyle = gr; g.fillRect(0, horizon, W, H - horizon);
+
+            const maxS = 45, samples = []; for (let s = -3; s <= maxS; s += s < 6 ? 0.2 : s < 20 ? 0.5 : 1.5) samples.push(s);
+            const band = (hw, col) => { const L = samples.map(s => at(s, hw)).filter(Boolean), R = samples.map(s => at(s, -hw)).filter(Boolean);
+                if (L.length < 2) return; g.beginPath(); g.moveTo(...L[0]); L.forEach(p => g.lineTo(...p)); R.reverse().forEach(p => g.lineTo(...p)); g.closePath(); g.fillStyle = col; g.fill(); };
+            const edge = (lat, col, w) => { const P = samples.map(s => at(s, lat)).filter(Boolean); if (P.length < 2) return;
+                g.beginPath(); g.moveTo(...P[0]); P.forEach(p => g.lineTo(...p)); g.strokeStyle = col; g.lineWidth = w; g.lineCap = "round"; g.stroke(); };
+            const half = 1.3;
+            band(half + 0.45, "#BFCADB"); band(half, "#4E596D"); edge(half, "rgba(255,255,255,.9)", 3); edge(-half, "rgba(255,255,255,.9)", 3);
+
+            const phase = m.walking ? flow * 2 : 0;
+            for (let k = 0; ; k++) { const s0 = k * 2 - phase; if (s0 > maxS) break;
+                if (s0 + 1 > 0.2) { const a = at(Math.max(0.2, s0), 0), b = at(s0 + 1, 0);
+                    if (a && b) { g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.strokeStyle = "rgba(255,255,255,.85)";
+                        g.lineWidth = Math.min(12, Math.max(1.5, focal * 0.1 / depthAt(center(s0 + 0.5)[1]) / 2)); g.stroke(); } } }
+
+            const stepM = S.feet ? 10 / FT : 3;
+            g.fillStyle = C.muted; g.textAlign = "left";
+            for (let mk = stepM; mk < (hasTurn ? ts : 18); mk += stepM) { const o = at(mk, -(half + 0.22)); if (!o) continue;
+                g.font = Math.min(17, Math.max(9, focal * 0.11 / depthAt(mk))) + "px system-ui"; g.fillText(S.feet ? Math.round(mk * FT) + " ft" : Math.round(mk) + " m", o[0] + 9, o[1]); }
+
+            const tags = [];
+            [...m.items].filter(i => i.s <= maxS).sort((a, b) => b.s - a.s).forEach(it => {
+                const lat = it.side === -1 ? half + 1 : it.side === 1 ? -(half + 1) : 0;
+                const base = at(it.s, lat), top0 = at(it.s, lat, it.side === 0 ? 1.9 : 1.6); if (!base || !top0) return;
+                const kpm = focal / depthAt(center(it.s)[1]) / 2, fade = Math.min(1, Math.max(0.35, 1 - it.s / maxS * 0.6));
+                const r = Math.min(24, Math.max(9, kpm * 0.3)), top = [Math.min(W - r - 6, Math.max(r + 6, top0[0])), top0[1]];
+                const col = it.color; g.globalAlpha = fade;
+                g.fillStyle = "rgba(0,0,0,.15)"; g.beginPath(); g.ellipse(base[0], base[1], r * 0.8, r * 0.22, 0, 0, 7); g.fill();
+                g.strokeStyle = col; g.lineWidth = Math.min(6, Math.max(2, kpm * 0.05)); g.beginPath(); g.moveTo(...base); g.lineTo(...top); g.stroke();
+                if (it.live && it.side !== 0) { g.globalAlpha = 0.25 * (1 - pulse) * fade; g.fillStyle = col; g.beginPath(); g.arc(top[0], top[1], r + 14 * pulse, 0, 7); g.fill(); g.globalAlpha = fade; }
+                g.fillStyle = "#fff"; g.beginPath(); g.arc(top[0], top[1], r + 2.5, 0, 7); g.fill();
+                g.fillStyle = col; g.beginPath(); g.arc(top[0], top[1], r, 0, 7); g.fill();
+                g.fillStyle = "#fff"; g.textAlign = "center"; g.font = "700 " + (r * (it.badge.length > 2 ? 0.62 : 0.95)) + "px system-ui"; g.fillText(it.badge, top[0], top[1] + r * 0.34);
+                const fs = Math.min(15, Math.max(11, r * 0.95)), d = lenText(it.s);
+                g.font = "700 " + fs + "px system-ui"; const w1 = g.measureText(it.label).width; g.font = (fs * 0.82) + "px system-ui"; const w2 = g.measureText(d).width;
+                const tw = Math.max(w1, w2) + 16, th = fs * 1.82 + 12, left = Math.min(W - tw - 4, Math.max(4, top[0] - tw / 2));
+                let tagTop = top[1] - r - th - 6;
+                for (let n = 0; n < 6; n++) { const hit = tags.find(t => left < t[0] + t[2] && left + tw > t[0] && tagTop < t[1] + t[3] && tagTop + th > t[1]); if (!hit) break; tagTop = hit[1] - th - 4; }
+                tagTop = Math.max(2, tagTop); tags.push([left, tagTop, tw, th]);
+                g.fillStyle = "rgba(0,0,0,.1)"; rr(g, left, tagTop + 2, tw, th, 10); g.fill();
+                g.fillStyle = "#fff"; rr(g, left, tagTop, tw, th, 10); g.fill(); g.fillStyle = col; rr(g, left, tagTop, 4, th, 2); g.fill();
+                g.textAlign = "left"; g.fillStyle = C.ink; g.font = "700 " + fs + "px system-ui"; g.fillText(it.label, left + 9, tagTop + fs + 3);
+                g.fillStyle = C.muted; g.font = (fs * 0.82) + "px system-ui"; g.fillText(d, left + 9, tagTop + th - 6);
+                g.globalAlpha = 1;
+            });
+
+            // you
+            const ax0 = 0, ay0 = 1.4, accent = m.accent;
+            const poly = (pts, z) => { const o = pts.map(([x, y]) => proj(x, y, z)); if (o.some(p => !p)) return null; g.beginPath(); g.moveTo(...o[0]); o.forEach(p => g.lineTo(...p)); g.closePath(); return true; };
+            const ring = []; for (let i = 0; i < 28; i++) { const a = i * Math.PI * 2 / 28, rr2 = 0.6 + 0.9 * pulse; ring.push([ax0 + rr2 * Math.cos(a), ay0 + rr2 * Math.sin(a)]); }
+            if (poly(ring, 0)) { g.globalAlpha = 0.3 * (1 - pulse); g.fillStyle = accent; g.fill(); g.globalAlpha = 1; }
+            const th = rad(m.arrow != null ? this.shown : 0), c = Math.cos(th), sn = Math.sin(th);
+            const arrowShape = k => [[0, 0.95], [-0.62, -0.62], [0, -0.28], [0.62, -0.62]].map(([x, y]) => [ax0 + k * (x * c + y * sn), ay0 + k * (-x * sn + y * c)]);
+            const disk = rd => { const p = []; for (let i = 0; i < 32; i++) { const a = i * Math.PI * 2 / 32; p.push([ax0 + rd * Math.cos(a), ay0 + rd * Math.sin(a)]); } return p; };
+            const outline = () => { g.strokeStyle = "#fff"; g.lineWidth = 4; g.lineJoin = "round"; g.stroke(); };
+            if (S.marker === "dot") {
+                if (poly(disk(0.5), 0)) { g.fillStyle = "rgba(0,0,0,.22)"; g.fill(); }
+                if (poly(disk(0.5), 0.08)) { outline(); g.fillStyle = accent; g.fill(); }
+            } else if (S.marker === "arrow") {
+                const sh = arrowShape(1);
+                if (poly(sh, 0)) { g.fillStyle = "rgba(0,0,0,.25)"; g.fill(); }
+                if (poly(sh, 0.1)) { g.fillStyle = shade(accent); g.fill(); }
+                if (poly(sh, 0.18)) { outline(); g.fillStyle = accent; g.fill(); }
+            } else {
+                if (m.arrow != null) { const beam = [[ax0, ay0]]; for (let i = 0; i <= 10; i++) { const a = rad(-28 + i * 5.6), bx = 2.2 * Math.sin(a), by = 2.2 * Math.cos(a); beam.push([ax0 + bx * c + by * sn, ay0 - bx * sn + by * c]); }
+                    if (poly(beam, 0.01)) { g.globalAlpha = 0.22; g.fillStyle = accent; g.fill(); g.globalAlpha = 1; } }
+                if (poly(disk(0.62), 0)) { g.fillStyle = "rgba(0,0,0,.22)"; g.fill(); }
+                if (poly(disk(0.62), 0.08)) { outline(); g.fillStyle = accent; g.fill(); }
+                if (poly(arrowShape(0.5), 0.14)) { g.fillStyle = "#fff"; g.fill(); }
+            }
+        }
+    }
+    function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+    function shade(hex) { const n = parseInt(hex.slice(1), 16); const f = v => Math.round(v * 0.6); return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`; }
+
+
+    // ───────── shell: tabs and pages ─────────
+    const TABS = [["home", "Home", "home"], ["search", "Search", "search"], ["trip", "My trip", "flight"], ["profile", "Profile", "person"]];
+    let page = "home", prevPage = "home";
+    function go(p) {
+        if (p !== page) prevPage = page;
+        page = p;
+        document.querySelectorAll(".page").forEach(el => el.classList.toggle("show", el.id === "p-" + p));
+        const tab = { place: S.tab, route: S.tab }[p] || p; if (["home", "search", "trip", "profile"].includes(p)) S.tab = p;
+        $("#tabs").innerHTML = TABS.map(([k, l, i]) => `<button data-go="${k}" class="${(tab === k) ? "sel" : ""}"><span class="pill">${ic(i)}</span>${l}</button>`).join("");
+        if (p === "home") renderHome(); if (p === "search") renderSearch(); if (p === "trip") renderTrip(); if (p === "profile") renderProfile();
+        window.scrollTo(0, 0);
+    }
+    document.addEventListener("click", e => {
+        const g = e.target.closest("[data-go]"); if (g) { go(g.dataset.go); return; }
+        const pl = e.target.closest("[data-place]"); if (pl) { openPlace(S.places.find(x => x.kind + x.id === pl.dataset.place)); return; }
+        const qc = e.target.closest("[data-quick]"); if (qc) { S.cat = qc.dataset.quick; go("search"); return; }
+        const bk = e.target.closest("[data-back]"); if (bk) { go(prevPage === page ? "search" : prevPage); return; }
+        const bc = e.target.closest("[data-beacon]"); if (bc) { beaconSheet(+bc.dataset.beacon); return; }
+    });
+    function bindMarkers() {
+        document.querySelectorAll("[data-marker]").forEach(box => {
+            box.innerHTML = [["both", "Dot + arrow"], ["arrow", "Arrow"], ["dot", "Dot"]].map(([k, l]) => `<button data-mk="${k}" class="${S.marker === k ? "sel" : ""}">${l}</button>`).join("");
+            box.querySelectorAll("button").forEach(b => b.onclick = ev => { ev.stopPropagation(); S.marker = b.dataset.mk; save("marker", S.marker); bindMarkers(); if (page === "profile") renderProfile(); });
+        });
+    }
+
+    // ───────── HOME (what the presenter's phone shows) ─────────
+    $("#p-home").innerHTML = `
+<div id="hNormal">
+  <div class="top"><div class="grow"><div>Hello 👋</div><h1>Your walk</h1></div><span id="hScan" class="chipst"></span></div>
+  <div class="searchbar" data-go="search">${ic("search")}<span>Where do you want to go?</span></div>
+  <div id="hTrip"></div>
+  <div class="quick">
+    <div data-quick="Restrooms"><span class="circle" style="background:${C.teal}1F;color:${C.teal}">${ic("wc")}</span>Restroom</div>
+    <div data-quick="Elevators"><span class="circle" style="background:${C.purple}1F;color:${C.purple}">${ic("elevator")}</span>Elevator</div>
+    <div data-quick="Exits"><span class="circle" style="background:${C.red}1F;color:${C.red}">${ic("exit")}</span>Exit</div>
+  </div>
+  <div class="nearest" id="hNearest"></div>
+  <div class="roadbox"><canvas id="homeRoad" style="height:400px"></canvas><div class="seg" data-marker></div><div class="roadcap" id="hCap"></div></div>
+  <div id="hNearby"></div>
+  <div class="muted" id="hOut"></div>
+</div>
+<div id="hGuide" style="display:none">
+  <div class="head"><span class="circle" style="background:${C.blue}1F;color:${C.blue}" id="gDestIc">${ic("place")}</span>
+    <div class="grow"><h2 id="gDest"></h2><div class="s" id="gLeft"></div></div></div>
+  <div class="banner" id="gBanner"><div class="ic" id="gIcon"></div><div><b id="gTitle"></b><span id="gSub"></span></div></div>
+  <div class="roadbox"><canvas id="guideRoad" style="height:360px"></canvas><div class="seg" data-marker></div></div>
+  <div class="chips" id="gChips"></div>
+  <div class="sec">Steps</div><div class="card steps" id="gSteps"></div>
+</div>`;
+    let homeRoad, guideRoad;
+
+    const STATE = { Straight: [C.blue, "up", 0], Turn: [C.purple, "up", 90], TurnAround: [C.red, "up", 180], WrongWay: [C.red, "up", 180],
+        Arrived: [C.green, "check", 0], Locating: [C.ink, "bt", 0], NoRoute: [C.ink, "close", 0] };
+    const KIND = { nearest: C.blue, live: C.green, off: C.grey, dest: C.orange };
+
+    function trendOf(id) { const h = S.hist[id]; if (!h || h.length < 4) return 0; const c = h[h.length - 1] - h[0]; return c < -0.4 ? -1 : c > 0.4 ? 1 : 0; }
+
+    function renderHome() {
+        if (!homeRoad) { homeRoad = new Road($("#homeRoad")); guideRoad = new Road($("#guideRoad")); bindMarkers(); }
+        const d = S.online ? S.live : null;
+        const nav = d?.nav;
+        $("#hNormal").style.display = nav ? "none" : ""; $("#hGuide").style.display = nav ? "" : "none";
+        const items = (d?.road?.items || []).filter(i => S.roadBeacons || i.kind === "dest").map(i => ({ ...i, color: KIND[i.kind] || C.green, live: i.kind !== "off" }));
+        if (nav) { renderGuide(d, items); return; }
+
+        const n = (d?.beacons || []).length;
+        $("#hScan").outerHTML = `<span id="hScan" class="chipst" style="background:${(d ? C.green : C.muted)}1F;color:${d ? C.green : C.muted}"><i style="background:${d ? C.green : C.muted}"></i>${d ? "Live · " + n : "Off"}</span>`;
+        $("#hTrip").innerHTML = tripBannerHtml();
+        // nearest card
+        const nr = d?.nearest, here = nr && nr.d < 1;
+        const [bg, title, sub, icon] = !d ? [C.ink, "Waiting for the presenter…", "The live view starts when the presenter's phone is sharing", "bt"]
+            : !nr ? [C.ink, "Looking for beacons…", "Walk around a little", "bt"]
+                : here ? [C.green, "You're at " + nr.label, "Right next to you", "check"]
+                    : [C.blue, "Near " + nr.label, nr.where || ("About " + lenText(nr.d) + " away" + ({ "-1": " · getting closer", "1": " · moving away" }[trendOf(d.beacons.find(b => b.label === nr.label)?.id)] || "")), "place"];
+        const nc = $("#hNearest"); nc.style.background = bg;
+        nc.innerHTML = `<div class="ic">${ic(icon)}</div><div class="grow"><b>${esc(title)}</b><span>${esc(sub)}</span></div>${ic("chev")}`;
+        nc.onclick = () => { const b = d?.beacons?.find(x => x.label === nr?.label); if (b) beaconSheet(b.id); };
+        homeRoad.set({ arrow: d?.road?.arrow ?? null, turnAt: null, turnDir: 0, items, walking: !!d?.walking, accent: C.blue });
+        $("#hCap").textContent = !d ? "The road shows the presenter's corridor" : d.behind?.length ? "Behind you: " + d.behind.join(", ")
+            : !d.position && n ? "Walk near 2 beacons to see which side they're on"
+                : d.heading == null ? "This phone has no compass, so the arrow can't turn"
+                    : d.map_heading == null ? "The arrow turns with the compass" : "The road is the main corridor · the arrow is you";
+        // nearby
+        const heard = [...(d?.beacons || [])].sort((a, b) => a.d - b.d);
+        $("#hNearby").innerHTML = heard.length ? `<div class="sec">Nearby</div><div class="list">` + heard.map((b, i) => {
+            const col = b.d < 1 ? C.green : i === 0 ? C.blue : "#6B7A94", tr = trendOf(b.id);
+            return `<div class="row" data-beacon="${b.id}"><span class="pin" style="background:${col}">${b.minor}</span>
+      <div class="grow"><div class="t">${esc(b.label)}</div><div class="s">${tr === -1 ? "Getting closer" : tr === 1 ? "Moving away" : i === 0 ? "Closest to you" : "In range"}</div></div>
+      <b>${lenText(b.d)}</b><span style="color:${C.muted}">${ic("chev")}</span></div>`; }).join("") + `</div>` : "";
+        const silent = S.beacons.filter(b => !heard.some(h => h.id === b.id));
+        $("#hOut").textContent = d && silent.length ? "Out of range: " + silent.map(b => b.label).join(", ") : " ";
+    }
+
+    function stepsFor(ids, dest, H, mir) {
+        if (!S.graph || !ids?.length) return [];
+        const by = new Map(S.graph.nodes.map(n => [n.id, n])), N = ids.map(i => by.get(i)).filter(Boolean);
+        if (N.length < 2) return [];
+        const seg = (a, b) => mapToBearing(b.x - a.x, b.y - a.y, H ?? 0, mir);
+        const out = []; let acc = 0, last = 0;
+        for (let i = 1; i < N.length; i++) {
+            acc += Math.hypot(N[i].x - N[i - 1].x, N[i].y - N[i - 1].y);
+            if (i < N.length - 1) { const t = rel(seg(N[i], N[i + 1]), seg(N[i - 1], N[i]));
+                if (Math.abs(t) >= 30) { out.push({ i: i - 1, icon: "up", rot: 0, text: "Walk " + lenText(acc - last) });
+                    out.push({ i, icon: "up", rot: t > 0 ? 90 : -90, text: `Turn ${t > 0 ? "right" : "left"} at ${nodeName(N[i], dest)}` }); last = acc; } }
+        }
+        out.push({ i: N.length - 2, icon: "up", rot: 0, text: "Walk " + lenText(acc - last) });
+        out.push({ i: N.length - 1, icon: "check", rot: 0, text: "Arrive at " + (dest?.name || nodeName(N[N.length - 1])) });
+        return { list: out, nodes: N };
+    }
+    function segIndex(N, p) { if (!p) return -1; let best = 0, bd = Infinity;
+        for (let i = 0; i < N.length - 1; i++) { const a = N[i], b = N[i + 1], vx = b.x - a.x, vy = b.y - a.y, L = vx * vx + vy * vy || 1;
+            const t = Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / L)), dd = Math.hypot(a.x + vx * t - p.x, a.y + vy * t - p.y); if (dd < bd) { bd = dd; best = i; } } return best; }
+    function stepsHtml(st, segNow) {
+        if (!st.list) return `<div class="s">Waiting for the route…</div>`;
+        return st.list.map(s => { const cls = segNow < 0 ? "" : s.i < segNow ? "done" : s.i === segNow ? "now" : "";
+            return `<div class="st ${cls}"><span class="circle" style="background:${C.blue}14;color:${C.blue}">${ic(s.icon, `style="transform:rotate(${s.rot}deg)"`)}</span><div>${esc(s.text)}</div></div>`; }).join("");
+    }
+
+    function renderGuide(d, items) {
+        const nav = d.nav, st = STATE[nav.state] || STATE.Straight;
+        const dest = S.places.find(p => p.kind === nav.dest_kind && p.id === nav.dest_id) || { name: nav.dest_name, type: "OTHER" };
+        $("#gDest").textContent = nav.dest_name;
+        $("#gDestIc").innerHTML = ic(placeIcon(dest.type)); $("#gDestIc").style.color = placeColor(dest.type); $("#gDestIc").style.background = placeColor(dest.type) + "1F";
+        $("#gLeft").textContent = nav.state === "Arrived" ? "You've arrived" : `${lenText(nav.remaining)} left · about ${Math.max(1, Math.round((nav.remaining || 0) / S.speed))} s`;
+        const rot = nav.state === "Turn" ? (/left/i.test(nav.title) ? -90 : 90) : st[2];
+        $("#gBanner").style.background = st[0];
+        $("#gIcon").innerHTML = ic(st[1], `style="transform:rotate(${rot}deg)"`);
+        $("#gTitle").textContent = nav.title; $("#gSub").textContent = nav.subtitle || "";
+        guideRoad.set({ arrow: d.road?.arrow ?? null, turnAt: d.road?.turn_at ?? null, turnDir: d.road?.turn_dir || 0, items, walking: !!d.walking, accent: st[0] });
+        const chips = [[`${(d.beacons || []).length} beacons`, C.green], [d.heading != null ? "🧭 Compass on" : "🧭 No compass", C.ink]];
+        if (d.steps) chips.push([`👣 ${d.steps} steps`, C.ink]); chips.push([d.walking ? "🚶 Walking" : "🧍 Standing", C.ink]);
+        $("#gChips").innerHTML = chips.map(([t, c]) => `<span class="chip" style="background:${c}14;color:${c}">${t}</span>`).join("");
+        const steps = stepsFor(nav.route, dest.navigation_node_id ? dest : null, d.map_heading, d.mirrored);
+        $("#gSteps").innerHTML = stepsHtml(steps, steps.nodes ? segIndex(steps.nodes, d.position) : -1);
+    }
+
+    function beaconSheet(id) {
+        const reg = S.beacons.find(b => b.id === id), h = (S.online && S.live?.beacons || []).find(b => b.id === id);
+        if (!reg && !h) return;
+        const row = (k, v) => v == null ? "" : `<div class="set"><div class="grow">${k}</div><b>${v}</b></div>`;
+        $("#panel").innerHTML = `<div class="grab"></div><div class="top" style="padding-top:0;gap:12px"><span class="pin" style="background:${h ? C.green : C.grey};width:46px;height:46px">${reg?.minor ?? h.minor}</span>
+    <div class="grow"><h1 style="font-size:20px">${esc(reg?.label || h.label)}</h1><div class="s">${h ? "Heard by the presenter's phone" : "Not heard right now"}</div></div></div>
+    <div class="card" style="margin-top:14px">${row("Distance", h ? lenText(h.d) : null)}${row("Signal", h?.rssi != null ? Math.round(h.rssi) + " dBm" : null)}
+    ${row("Battery", h?.battery != null ? h.battery + "%" + (h.charging ? " · charging" : "") : null)}${row("Temperature", h?.temp != null ? h.temp.toFixed(1) + " °C" : null)}
+    ${row("Fan", h?.fan != null ? (h.fan ? "On" : "Off") : null)}${row("Beacon number", reg?.minor)}${!h ? `<div class="s">Battery and temperature appear when the presenter is near this beacon.</div>` : ""}</div>`;
+        $("#sheet").classList.add("show");
+    }
+    $("#sheet").onclick = e => { if (e.target.id === "sheet") $("#sheet").classList.remove("show"); };
+
+    // ───────── trip banner / My trip ─────────
+    function tripState(left) {
+        const m = Math.round(left / 60000);
+        if (left < -30 * 60000) return ["Boarding closed", "#6B7A94"];
+        if (left <= 0) return ["Boarding now", C.red];
+        if (m < 15) return [`Boarding in ${m} min`, C.red];
+        if (m <= 45) return [`Boarding in ${m} min · head to your gate soon`, C.amber];
+        return [`Boarding in ${m >= 60 ? Math.floor(m / 60) + " h " + (m % 60) + " min" : m + " min"} · plenty of time`, C.green];
+    }
+    function tripBannerHtml() {
+        const t = S.trip; if (!t?.gate || !t?.boarding) return "";
+        const left = t.boarding - Date.now(); if (left > 3 * 3600000 || left < -30 * 60000) return "";
+        const [title, col] = tripState(left), g = S.places.find(p => p.kind + p.id === t.gate);
+        return `<div class="nearest" style="background:${col};padding:10px 14px" data-place="${t.gate}">${ic("flight")}<div class="grow"><b style="font-size:15px">${esc(t.flight || "Your flight")} · ${title}</b>
+    <span>Tap for directions to ${esc(g?.name || "your gate")}</span></div>${ic("chev")}</div>`;
+    }
+    function renderTrip() {
+        const t = S.trip || {}, gates = S.places.filter(p => p.type === "GATE");
+        const left = t.boarding ? t.boarding - Date.now() : null, stt = left != null ? tripState(left) : null;
+        const hhmm = t.boarding ? new Date(t.boarding).toTimeString().slice(0, 5) : "";
+        $("#p-trip").innerHTML = `<div class="top"><div class="grow"><div>Your flight</div><h1>My trip</h1></div></div>
+    ${stt ? `<div class="nearest" style="background:${stt[1]}">${ic("flight")}<div class="grow"><b>${esc(t.flight || "Your flight")}</b><span>${stt[0]}</span></div></div>` : ""}
+    <div class="card" style="margin-top:12px;display:grid;gap:10px">
+      <label class="s">Flight number</label><input class="text" id="tFlight" value="${esc(t.flight || "")}" placeholder="e.g. ME 201">
+      <label class="s">Gate</label><select class="text" id="tGate"><option value="">Choose your gate</option>${gates.map(g => `<option value="${g.kind + g.id}" ${t.gate === g.kind + g.id ? "selected" : ""}>${esc(g.name)}</option>`).join("")}</select>
+      <label class="s">Boarding time (today)</label><input class="text" id="tTime" type="time" value="${hhmm}">
+      <button class="btn primary full" id="tSave">Save trip</button>
+      ${t.gate ? `<button class="btn ghost full" data-place="${t.gate}">${ic("nav")} Directions to the gate</button><button class="btn full" id="tDel" style="background:transparent;color:${C.red}">Remove trip</button>` : ""}
+    </div>`;
+        $("#tSave").onclick = () => { const tm = $("#tTime").value; let b = null;
+            if (tm) { const [h, m] = tm.split(":").map(Number), dt = new Date(); dt.setHours(h, m, 0, 0); b = dt.getTime(); }
+            S.trip = { flight: $("#tFlight").value.trim(), gate: $("#tGate").value, boarding: b }; save("trip", S.trip); renderTrip(); };
+        const del = $("#tDel"); if (del) del.onclick = () => { S.trip = null; save("trip", null); renderTrip(); };
+    }
+
+    // ───────── SEARCH ─────────
+    $("#p-search").innerHTML = `<div class="top"><div class="grow"><div>Search</div><h1>Where to?</h1></div></div>
+  <div style="margin-top:12px"><input class="text" id="q" type="search" placeholder="Search gates, restrooms, shops…" autocomplete="off"></div>
+  <div class="hscroll" id="cats" style="margin-top:12px"></div>
+  <div id="sSaved"></div><div id="sRecent"></div>
+  <div class="sec" id="sTitle">Places</div><div class="list" id="sList"></div>`;
+    $("#q").oninput = () => renderSearch();
+    function placeRow(p) {
+        const col = placeColor(p.type), saved = S.saved.includes(p.kind + p.id);
+        return `<div class="row" data-place="${p.kind + p.id}"><span class="circle" style="background:${col}1F;color:${col}">${ic(placeIcon(p.type))}</span>
+    <div class="grow"><div class="t">${esc(p.name)}</div><div class="s">${esc(typeLabel(p.type))} · ${esc(p.floor_name)}</div></div>
+    ${saved ? `<span style="color:${C.amber}">${ic("star")}</span>` : ""}<span style="color:${C.muted}">${ic("chev")}</span></div>`;
+    }
+    function renderSearch() {
+        $("#cats").innerHTML = CATS.map(([k, l]) => `<span class="fchip ${S.cat === k ? "sel" : ""}" data-cat="${k}">${l}</span>`).join("");
+        $("#cats").querySelectorAll("[data-cat]").forEach(c => c.onclick = () => { S.cat = c.dataset.cat; renderSearch(); });
+        const q = $("#q").value.trim().toLowerCase(), cat = CATS.find(c => c[0] === S.cat);
+        const list = S.places.filter(p => (S.cat === "All" || cat[4].includes(p.type)) &&
+            (!q || p.name.toLowerCase().includes(q) || typeLabel(p.type).toLowerCase().includes(q) || (SYN[p.type] || []).some(w => w.startsWith(q) || q.includes(w))));
+        const saved = S.places.filter(p => S.saved.includes(p.kind + p.id)), recent = S.recent.map(k => S.places.find(p => p.kind + p.id === k)).filter(Boolean);
+        $("#sSaved").innerHTML = !q && S.cat === "All" && saved.length ? `<div class="sec">Saved</div><div class="list">${saved.map(placeRow).join("")}</div>` : "";
+        $("#sRecent").innerHTML = !q && S.cat === "All" && recent.length ? `<div class="sec">Recent</div><div class="list">${recent.slice(0, 5).map(placeRow).join("")}</div>` : "";
+        $("#sTitle").textContent = q || S.cat !== "All" ? `${list.length} result${list.length === 1 ? "" : "s"}` : "All places";
+        $("#sList").innerHTML = list.length ? list.map(placeRow).join("") : `<div class="empty">${S.places.length ? "No places match." : "Loading places…"}</div>`;
+    }
+
+    // ───────── PLACE page ─────────
+    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const hm = s => { const [h, m] = s.split(":").map(Number); return h * 60 + (m || 0); };
+    const tt = min => { const m = ((min % 1440) + 1440) % 1440, h = Math.floor(m / 60), mm = m % 60, h12 = h % 12 === 0 ? 12 : h % 12; return h12 + (mm ? ":" + String(mm).padStart(2, "0") : "") + (h < 12 ? " AM" : " PM"); };
+    function openStatus(hours) {
+        if (!hours?.length) return null;
+        const now = new Date(), today = (now.getDay() + 6) % 7, t = today * 1440 + now.getHours() * 60 + now.getMinutes(), week = 10080;
+        const spans = hours.map(p => { const o = hm(p.open), c = hm(p.close); return [p.day * 1440 + o, p.day * 1440 + (c <= o ? c + 1440 : c)]; });
+        if (spans.reduce((a, s) => a + s[1] - s[0], 0) >= week - 7) return ["Open 24 hours", C.green];
+        const inSpan = (s, x) => (x >= s[0] && x < s[1]) || (x + week >= s[0] && x + week < s[1]);
+        const cur = spans.find(s => inSpan(s, t));
+        if (cur) { const left = (cur[1] - t + week) % week; return left <= 60 ? ["Closes soon · " + tt(cur[1]), C.amber] : ["Open · closes " + tt(cur[1]), C.green]; }
+        const nx = spans.reduce((b, s) => ((s[0] - t + week) % week) < ((b[0] - t + week) % week) ? s : b);
+        const wait = (nx[0] - t + week) % week, day = Math.floor(nx[0] / 1440) % 7;
+        const w = wait < 60 ? "opens in " + wait + " min" : day === today && wait < 1440 ? "opens " + tt(nx[0]) : day === (today + 1) % 7 ? "opens " + tt(nx[0]) + " tomorrow" : "opens " + DAYS[day].slice(0, 3) + " " + tt(nx[0]);
+        return ["Closed · " + w, wait < 60 ? C.amber : C.red];
+    }
+    const money = (p, c) => (c === "USD" ? "$" : c === "EUR" ? "€" : c + " ") + (p % 1 ? p.toFixed(2) : p);
+
+    async function openPlace(p) {
+        if (!p) return;
+        S.place = p; S.recent = [p.kind + p.id, ...S.recent.filter(k => k !== p.kind + p.id)].slice(0, 8); save("recent", S.recent);
+        const col = placeColor(p.type), key = p.kind + p.id;
+        const isSaved = () => S.saved.includes(key);
+        const draw = det => {
+            $("#p-place").innerHTML = `<div class="head"><button class="iconbtn" data-back>${ic("back")}</button><div class="grow"></div>
+      <button class="iconbtn" id="star" style="color:${isSaved() ? C.amber : C.ink}">${ic(isSaved() ? "star" : "starO")}</button></div>
+      <div style="display:flex;gap:14px;align-items:center"><span class="circle" style="width:60px;height:60px;background:${col}1F;color:${col}">${ic(placeIcon(p.type), 'style="width:30px;height:30px"')}</span>
+      <div class="grow"><h1 style="margin:0;font-size:24px">${esc(p.name)}</h1><div class="s" style="font-size:14px">${esc(typeLabel(p.type))} · ${esc(p.floor_name)}</div></div></div>
+      ${isSaved() ? `<div class="chips"><span class="chip" style="background:${C.amber}1F;color:${C.amber}">★ Saved</span></div>` : ""}
+      ${det == null ? `<p class="s">Loading details…</p>` : detailsHtml(det, p)}
+      <button class="btn primary full" style="margin-top:16px;height:52px" id="startNav">${ic("nav")} Start navigation</button>
+      ${p.type === "GATE" ? `<button class="btn ghost full" style="margin-top:8px" id="myGate">${ic("flight")} Set as my gate</button>` : ""}
+      <p class="s" style="text-align:center">On this web demo, navigation is a preview you walk with a slider.</p>`;
+            $("#star").onclick = () => { S.saved = isSaved() ? S.saved.filter(k => k !== key) : [...S.saved, key]; save("saved", S.saved); draw(det); };
+            $("#startNav").onclick = () => openRoute(p);
+            const mg = $("#myGate"); if (mg) mg.onclick = () => { S.trip = { ...(S.trip || {}), gate: key }; save("trip", S.trip); go("trip"); };
+            document.querySelectorAll("[data-menu]").forEach(b => b.onclick = () => { document.querySelectorAll("[data-menu]").forEach(x => x.classList.toggle("sel", x === b));
+                document.querySelectorAll("[data-sec]").forEach(r => r.style.display = b.dataset.menu === "ALL" || r.dataset.sec === b.dataset.menu ? "" : "none"); });
+            const wk = $("#week"); if (wk) wk.onclick = () => { S.week = !S.week; draw(det); };
+        };
+        go("place"); draw(null);
+        try { draw(await api(`/places/details?kind=${encodeURIComponent(p.kind || "facility")}&id=${p.id}`)); } catch (e) { draw({}); }
+    }
+    function detailsHtml(d, p) {
+        let h = "";
+        const st = openStatus(d.hours), chips = [];
+        if (st) chips.push(`<span class="chip" style="background:${st[1]}1F;color:${st[1]}">${st[1] === C.green ? "🟢" : st[1] === C.amber ? "🟠" : "🔴"} ${st[0]}</span>`);
+        if (d.price_level) chips.push(`<span class="chip" style="background:#0710270F">${"$".repeat(Math.min(4, d.price_level))}</span>`);
+        if (chips.length) h += `<div class="chips">${chips.join("")}</div>`;
+        const acts = [];
+        if (d.phone) acts.push(`<a href="tel:${esc(d.phone.replace(/[^+\d]/g, ""))}">${ic("call")}Call</a>`);
+        if (d.website) acts.push(`<a target="_blank" rel="noopener" href="${esc(d.website.startsWith("http") ? d.website : "https://" + d.website)}">${ic("web")}Website</a>`);
+        if (d.instagram) acts.push(`<a target="_blank" rel="noopener" href="https://instagram.com/${esc(d.instagram.replace(/^@/, ""))}">${ic("insta")}Instagram</a>`);
+        if (d.phone || d.website || d.description) acts.push(`<button onclick="navigator.share ? navigator.share({title:'${esc(p.name).replace(/'/g, "")}', text:'${esc(p.name).replace(/'/g, "")} · ${esc(p.floor_name)}', url: location.href}).catch(()=>{}) : 0">${ic("share")}Share</button>`);
+        if (acts.length) h += `<div class="acts">${acts.join("")}</div>`;
+        if (d.description || d.tags?.length) h += `<div class="sec">About</div><div class="card">${d.description ? esc(d.description) : ""}${d.tags?.length ? `<div class="chips">${d.tags.map(t => `<span class="chip" style="background:#0710270A;color:${C.muted};font-weight:500">${esc(t)}</span>`).join("")}</div>` : ""}
+    ${d.phone ? `<div class="s" style="margin-top:8px;font-size:14px;color:${C.ink}">📞 ${esc(d.phone)}</div>` : ""}</div>`;
+        if (d.hours?.length) { const today = (new Date().getDay() + 6) % 7, days = S.week ? [0, 1, 2, 3, 4, 5, 6] : [today];
+            h += `<div class="sec" style="display:flex">Opening hours<span class="grow"></span><span id="week" style="color:${C.blue};cursor:pointer;text-transform:none;letter-spacing:0">${S.week ? "Hide" : "Whole week"}</span></div><div class="card">` +
+                days.map(i => { const ps = d.hours.filter(x => x.day === i);
+                    const tx = !ps.length ? "Closed" : ps.some(x => x.open === "00:00" && x.close === "24:00") ? "Open 24 hours" : ps.map(x => tt(hm(x.open)) + " – " + tt(hm(x.close))).join(", ");
+                    return `<div style="display:flex;padding:3px 0;${i === today ? "font-weight:700" : ""}"><span class="grow">${i === today ? "Today" : DAYS[i]}</span><span style="color:${ps.length ? C.ink : C.red}">${tx}</span></div>`; }).join("") + `</div>`; }
+        if (d.menu?.length) { const secs = [...new Set(d.menu.map(m => m.section))];
+            h += `<div class="sec">Menu · ${d.menu.length} items</div><div class="card"><div class="hscroll" style="margin-bottom:6px">${["ALL", ...secs].map(s => `<span class="fchip ${s === "ALL" ? "sel" : ""}" data-menu="${esc(s)}">${s === "ALL" ? "All" : esc(s)}</span>`).join("")}</div>` +
+                d.menu.map(m => `<div class="menuitem" data-sec="${esc(m.section)}"><div class="grow"><div class="${m.available ? "" : "na"}" style="font-weight:600">${esc(m.name)}${m.vegetarian ? " 🌱" : ""}${m.spicy ? " 🌶️" : ""}</div>
+        ${m.description ? `<div class="s">${esc(m.description)}</div>` : ""}${m.available ? "" : `<div class="s" style="color:${C.red}">Not available right now</div>`}</div><b>${money(m.price, m.currency)}</b></div>`).join("") + `</div>`; }
+        return h;
+    }
+
+    // ───────── ROUTE preview (the app's navigation screen, walked with a slider) ─────────
+    $("#p-route").innerHTML = `<div class="head"><button class="iconbtn" data-back>${ic("back")}</button>
+    <div class="grow"><h2 id="rDest"></h2><div class="s" id="rLeft"></div></div></div>
+  <div class="banner" id="rBanner"><div class="ic" id="rIcon"></div><div><b id="rTitle"></b><span id="rSub"></span></div></div>
+  <div class="roadbox"><canvas id="routeRoad" style="height:340px"></canvas><div class="seg" data-marker></div></div>
+  <div class="card" style="margin-top:12px"><div class="s" id="rFrom"></div><input type="range" id="walk" min="0" max="1000" value="0">
+    <div class="s">Drag to walk the route${S.compass ? "" : " · allow your compass in Profile and the arrow turns with your phone"}</div></div>
+  <div class="sec">Steps</div><div class="card steps" id="rSteps"></div>`;
+    let routeRoad;
+    function dijkstra(start, goal, stepFree) {
+        const adj = new Map(); S.graph.edges.forEach(e => { if (stepFree && !e.is_accessible) return; if (!adj.has(e.from_node_id)) adj.set(e.from_node_id, []); adj.get(e.from_node_id).push(e); });
+        const dist = new Map([[start, 0]]), prev = new Map(), done = new Set(), q = [[0, start]];
+        while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (done.has(u)) continue; done.add(u); if (u === goal) break;
+            (adj.get(u) || []).forEach(e => { const nd = d + e.distance_meters; if (nd < (dist.get(e.to_node_id) ?? Infinity)) { dist.set(e.to_node_id, nd); prev.set(e.to_node_id, u); q.push([nd, e.to_node_id]); } }); }
+        if (!dist.has(goal)) return null;
+        const path = [goal]; while (path[0] !== start) path.unshift(prev.get(path[0])); return path;
+    }
+    function openRoute(p) {
+        if (!S.graph) return;
+        const floorNodes = S.graph.nodes.filter(n => n.floor_id === p.floor_id);
+        const lp = S.online && S.live?.position;
+        const start = lp ? floorNodes.reduce((b, n) => Math.hypot(n.x - lp.x, n.y - lp.y) < Math.hypot(b.x - lp.x, b.y - lp.y) ? n : b)
+            : floorNodes.find(n => /ENTRANCE/i.test(n.code)) || floorNodes[0];
+        const ids = start && dijkstra(start.id, p.navigation_node_id, S.stepFree);
+        if (!ids) { alertLike("No route found to " + p.name); return; }
+        const by = new Map(S.graph.nodes.map(n => [n.id, n])), N = ids.map(i => by.get(i));
+        let total = 0; for (let i = 1; i < N.length; i++) total += Math.hypot(N[i].x - N[i - 1].x, N[i].y - N[i - 1].y);
+        S.route = { dest: p, ids, N, total, s: 0, from: lp ? "the presenter's position" : nodeName(start) };
+        go("route");
+        if (!routeRoad) routeRoad = new Road($("#routeRoad"));
+        bindMarkers(); $("#walk").value = 0; $("#walk").oninput = e => { S.route.s = e.target.value / 1000 * S.route.total; updateRoute(); };
+        updateRoute();
+    }
+    function alertLike(t) { $("#panel").innerHTML = `<div class="grab"></div><p style="font-weight:600">${esc(t)}</p>`; $("#sheet").classList.add("show"); }
+    function updateRoute() {
+        const R = S.route; if (!R || page !== "route") return;
+        const N = R.N, H = S.live?.map_heading ?? null, mir = !!S.live?.mirrored;
+        let acc = 0, seg = 0, pos = { x: N[0].x, y: N[0].y };
+        for (let i = 0; i < N.length - 1; i++) { const L = Math.hypot(N[i + 1].x - N[i].x, N[i + 1].y - N[i].y);
+            if (acc + L >= R.s || i === N.length - 2) { const t = L ? Math.min(1, (R.s - acc) / L) : 0; pos = { x: N[i].x + (N[i + 1].x - N[i].x) * t, y: N[i].y + (N[i + 1].y - N[i].y) * t }; seg = i; break; } acc += L; }
+        const remaining = Math.max(0, R.total - R.s);
+        let target = seg + 1; if (target < N.length - 1 && Math.hypot(N[target].x - pos.x, N[target].y - pos.y) < 1) target++;
+        let ux = N[target].x - pos.x, uy = N[target].y - pos.y; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+        const sb = (a, b) => mapToBearing(b.x - a.x, b.y - a.y, H ?? 0, mir);
+        let turn = null; for (let i = seg + 1; i < N.length - 1; i++) { const t = rel(sb(N[i], N[i + 1]), sb(N[i - 1], N[i])); if (Math.abs(t) >= 30) { turn = [i, t]; break; } }
+        const dt = turn ? Math.hypot(N[turn[0]].x - pos.x, N[turn[0]].y - pos.y) : null;
+        let nd = null; if (turn) { const a = N[turn[0]], b = N[turn[0] + 1], l = Math.hypot(b.x - a.x, b.y - a.y) || 1; nd = [(b.x - a.x) / l, (b.y - a.y) / l]; }
+        // instruction (same rules as the app)
+        let state = "Straight", title = "Go straight", sub = dt != null ? `${lenText(dt)}, then turn ${turn[1] > 0 ? "right" : "left"}` : `${lenText(remaining)} to ${R.dest.name}`, arrow = null;
+        if (S.compass && S.myHeading != null && H != null) arrow = rel(mapToBearing(ux, uy, H, mir), S.myHeading);
+        if (remaining < 1) { state = "Arrived"; title = "You've arrived"; sub = R.dest.name; }
+        else if (arrow != null && Math.abs(arrow) > 135) { state = "TurnAround"; title = "Turn around"; sub = R.dest.name + " is behind you"; }
+        else if (arrow != null && Math.abs(arrow) > 35) { state = "Turn"; title = arrow > 0 ? "Turn right" : "Turn left"; sub = "then walk straight"; }
+        else if (arrow == null && dt != null && dt < 1.5) { state = "Turn"; title = turn[1] > 0 ? "Turn right" : "Turn left"; sub = "at " + nodeName(N[turn[0]], R.dest); }
+        const st = STATE[state];
+        $("#rDest").textContent = R.dest.name;
+        $("#rLeft").textContent = state === "Arrived" ? "You've arrived" : `${lenText(remaining)} left · about ${Math.max(1, Math.round(remaining / S.speed))} s`;
+        $("#rBanner").style.background = st[0];
+        $("#rIcon").innerHTML = ic(st[1], `style="transform:rotate(${state === "Turn" ? (/left/.test(title) ? -90 : 90) : st[2]}deg)"`);
+        $("#rTitle").textContent = title; $("#rSub").textContent = sub;
+        $("#rFrom").textContent = `From ${R.from} · ${lenText(R.total)}`;
+        // beacons along the road
+        const heard = new Set(S.online ? (S.live?.beacons || []).map(b => b.id) : []);
+        const place = (bx, by) => { const vx = bx - pos.x, vy = by - pos.y; let s = vx * ux + vy * uy, lat = ux * vy - uy * vx;
+            if (turn && s > dt) { const tn = N[turn[0]], wx = bx - tn.x, wy = by - tn.y, a2 = wx * nd[0] + wy * nd[1]; if (a2 > 0) { s = dt + 1.8 * Math.PI / 2 + a2; lat = nd[0] * wy - nd[1] * wx; } }
+            if (mir) lat = -lat; return [s, lat]; };
+        const items = [];
+        if (S.roadBeacons) S.beacons.filter(b => b.floor_id === R.dest.floor_id).forEach(b => { const [s, lat] = place(b.x, b.y);
+            if (s >= 0.3 && s <= 40 && Math.abs(lat) < 8) items.push({ label: b.label, badge: String(b.minor), s, side: lat >= 0 ? -1 : 1, color: heard.has(b.id) ? C.green : C.grey, live: heard.has(b.id) }); });
+        const last = N[N.length - 1]; { const [s] = place(last.x, last.y); if (s >= 0.3 && s <= 40) items.push({ label: R.dest.name, badge: "★", s, side: 0, color: placeColor(R.dest.type), live: true }); }
+        routeRoad.set({ arrow: state === "Arrived" ? null : arrow, turnAt: state === "Arrived" ? null : dt, turnDir: turn ? (turn[1] > 0 ? 1 : -1) : 0, items, walking: R.s > 0 && R.s < R.total, accent: st[0] });
+        const steps = stepsFor(R.ids, R.dest, H, mir); $("#rSteps").innerHTML = stepsHtml(steps, seg);
+    }
+    setInterval(() => { if (page === "route" && S.compass) updateRoute(); }, 150);
+
+    // ───────── PROFILE & settings ─────────
+    function sw(id, on) { return `<label class="sw"><input type="checkbox" id="${id}" ${on ? "checked" : ""}><span></span></label>`; }
+    function renderProfile() {
+        $("#p-profile").innerHTML = `<div class="top"><div class="grow"><div>Web demo</div><h1>Profile & settings</h1></div></div>
+    <div class="sec">Navigation</div><div class="card">
+      <div class="set">${ic("walk")}<div class="grow"><div class="t">Step-free routes</div><div class="s">Avoid stairs and escalators; use elevators and ramps</div></div>${sw("sStep", S.stepFree)}</div>
+      <div class="set" style="display:block"><div style="display:flex;gap:14px;align-items:center">${ic("walk")}<div class="grow"><div class="t">Walking speed</div><div class="s">Used for the time estimates</div></div></div>
+        <div class="chips">${[["Relaxed", 0.9], ["Normal", 1.2], ["Fast", 1.5]].map(([l, v]) => `<span class="fchip ${S.speed === v ? "sel" : ""}" data-speed="${v}">${l}</span>`).join("")}</div></div>
+      <div class="set">${ic("compass")}<div class="grow"><div class="t">Use my compass</div><div class="s" id="cState">${S.compass ? "On · " + Math.round(S.myHeading ?? 0) + "°" : "Your arrow turns when you turn your phone"}</div></div>
+        <button class="btn ghost" id="cBtn" style="padding:8px 14px">${S.compass ? "On" : "Allow"}</button></div>
+    </div>
+    <div class="sec">Display</div><div class="card">
+      <div class="set">${ic("ruler")}<div class="grow"><div class="t">Use feet</div><div class="s">${S.feet ? "Distances in feet" : "Distances in metres"}</div></div>${sw("sFeet", S.feet)}</div>
+      <div class="set" style="display:block"><div style="display:flex;gap:14px;align-items:center">${ic("nav")}<div class="grow"><div class="t">Your position on the road</div><div class="s">The arrow turns with the compass</div></div></div>
+        <div class="chips">${[["both", "Dot + arrow"], ["arrow", "Arrow"], ["dot", "Blue dot"]].map(([k, l]) => `<span class="fchip ${S.marker === k ? "sel" : ""}" data-mark="${k}">${l}</span>`).join("")}</div></div>
+      <div class="set">${ic("bt")}<div class="grow"><div class="t">Show beacons along the road</div><div class="s">Beacons appear on the left and right as you walk</div></div>${sw("sBeac", S.roadBeacons)}</div>
+    </div>
+    <div class="sec">Share this demo</div><div class="card qr"><div id="qrcode"></div><div class="url" id="qrUrl"></div><div class="s">Scan with any phone camera · no app to install</div></div>
+    <div class="sec">About</div><div class="card"><div class="set"><div class="grow">Server</div><b class="s">${esc(location.host)}</b></div>
+      <div class="set"><div class="grow">Version</div><b class="s">1.0 web demo</b></div></div>`;
+        $("#sStep").onchange = e => { S.stepFree = e.target.checked; save("stepFree", S.stepFree); };
+        $("#sFeet").onchange = e => { S.feet = e.target.checked; save("feet", S.feet); renderProfile(); };
+        $("#sBeac").onchange = e => { S.roadBeacons = e.target.checked; save("roadBeacons", S.roadBeacons); };
+        document.querySelectorAll("[data-speed]").forEach(c => c.onclick = () => { S.speed = +c.dataset.speed; save("speed", S.speed); renderProfile(); });
+        document.querySelectorAll("[data-mark]").forEach(c => c.onclick = () => { S.marker = c.dataset.mark; save("marker", S.marker); bindMarkers(); renderProfile(); });
+        $("#cBtn").onclick = enableCompass;
+        makeQr();
+    }
+    S.stepFree = load("stepFree", false);
+    let qrLib = false;
+    function makeQr() {
+        const url = location.origin + "/demo"; $("#qrUrl").textContent = url.replace(/^https?:\/\//, "");
+        const drawQr = () => { $("#qrcode").innerHTML = ""; new QRCode($("#qrcode"), { text: url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); };
+        if (qrLib) return drawQr();
+        const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+        s.onload = () => { qrLib = true; if ($("#qrcode")) drawQr(); }; document.head.appendChild(s);
+    }
+    async function enableCompass() {
+        try {
+            if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+                const r = await DeviceOrientationEvent.requestPermission(); if (r !== "granted") throw new Error("denied"); }
+            const onOri = e => { let h = null;
+                if (typeof e.webkitCompassHeading === "number") h = e.webkitCompassHeading; else if (e.absolute && typeof e.alpha === "number") h = 360 - e.alpha;
+                if (h == null) return; S.myHeading = norm(h + ((screen.orientation && screen.orientation.angle) || window.orientation || 0)); S.compass = true;
+                const cs = $("#cState"); if (cs) cs.textContent = "On · " + Math.round(S.myHeading) + "°"; };
+            window.addEventListener("deviceorientationabsolute", onOri, true); window.addEventListener("deviceorientation", onOri, true);
+            const b = $("#cBtn"); if (b) b.textContent = "On";
+            setTimeout(() => { if (!S.compass && $("#cState")) $("#cState").textContent = "No compass reading on this phone or browser"; }, 3000);
+        } catch (e) { const cs = $("#cState"); if (cs) cs.textContent = "Compass permission was refused"; }
+    }
+
+    // ───────── live updates from the presenter ─────────
+    async function poll() {
+        try { const r = await api("/live/state"); S.online = !!r.online; S.live = r.data || null; } catch (e) { S.online = false; }
+        if (S.online && S.live) (S.live.beacons || []).forEach(b => { const h = S.hist[b.id] || (S.hist[b.id] = []); h.push(b.d); if (h.length > 6) h.shift(); });
+        const w = $("#watch"); w.className = "watch" + (S.online ? "" : " off");
+        $("#watchText").textContent = !S.online ? "The presenter's phone isn't sharing right now" : S.live?.nav ? `Live · the presenter is navigating to ${S.live.nav.dest_name}` : "Live · you're seeing the presenter's phone";
+        if (page === "home") renderHome();
+        setTimeout(poll, 1000);
+    }
+    (async function start() {
+        go(location.hash === "#qr" ? "profile" : "home");
+        try { S.beacons = (await api(`/beacons?location_id=${LOCATION_ID}`)).beacons || []; } catch (e) {}
+        try { S.graph = await api(`/navigation/graph?location_id=${LOCATION_ID}`); } catch (e) {}
+        try { S.places = (await api(`/destinations?location_id=${LOCATION_ID}&q=`)).destinations || []; } catch (e) {}
+        if (page === "search") renderSearch();
+        poll();
+    })();
+</script>
+</body>
+</html>

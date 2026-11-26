@@ -63,6 +63,10 @@ func main() {
 	mux.HandleFunc("/places/details", placeDetailsHandler(db)) // shop & restaurant details (place_details.go)
 	mux.HandleFunc("/navigation/graph", graphHandler(db))
 	mux.HandleFunc("/beacons", beaconsHandler(db))
+	mux.HandleFunc("/technician/beacons/delete", deleteBeaconHandler(db)) // technician_delete.go
+	mux.HandleFunc("/technician/beacons/place", beaconPlaceHandler(db))   // technician_place.go
+	// live_demo.go + demo.html
+	registerLiveDemo(mux)
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
